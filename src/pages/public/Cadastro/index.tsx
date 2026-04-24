@@ -14,22 +14,34 @@ export function Cadastro() {
   const [senha, setSenha] = useState('');
   const [carregando, setCarregando] = useState(false);
 
-  const handleCadastro = async (e: React.FormEvent) => {
+const handleCadastro = async (e: React.FormEvent) => {
     e.preventDefault(); 
     setCarregando(true);
 
     const novoUsuario = {
-      tipo: tipoEmpresa,
+      tipo: tipoEmpresa == 'geradora' ? 'INDUSTRIA' : 'EMPRESA', // Mantém 'geradora' ou 'receptora' conforme seu estado
       nome: razaoSocial,
-      documento: cnpj,
+      email: cnpj,      // O "CNPJ" que na verdade é o e-mail para o banco
       senha: senha 
     };
 
-    // CHAMA A FUNÇÃO EXTERNA EM VEZ DO LOCALSTORAGE DIRETO
-    await realizarCadastro(novoUsuario);
+    try {
+      // Chama o serviço e aguarda a resposta do Axios
+      const resultado = await realizarCadastro(novoUsuario);
 
-    alert('Cadastro realizado com sucesso!'); 
-    navigate('/login'); 
+      if (resultado.sucesso) {
+        alert('Cadastro realizado com sucesso!'); 
+        navigate('/login'); 
+      } else {
+        // Exibe o erro real vindo do Back-end (ex: e-mail já existe)
+        alert(resultado.mensagem);
+      }
+    } catch (error) {
+      alert('Erro de conexão com o servidor.');
+    } finally {
+      // Libera o botão independente de sucesso ou erro
+      setCarregando(false);
+    }
   };
 
   return (

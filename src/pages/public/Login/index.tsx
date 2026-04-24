@@ -13,20 +13,29 @@ export function Login() {
   const [erro, setErro] = useState('');
   const [carregando, setCarregando] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+ const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault(); 
     setErro(''); 
     setCarregando(true);
 
-    const resposta = await realizarLogin(cnpj, senha);
+    try {
+      // Passamos o valor do estado 'cnpj' (que é o e-mail do Lugli) 
+      // para a função de login.
+      const resposta = await realizarLogin(cnpj, senha);
 
-    if (resposta.sucesso) {
-      navigate('/dashboard'); 
-    } else {
-      setErro(resposta.mensagem || 'Erro ao fazer login.');
+      if (resposta.sucesso) {
+        // Se o login der certo, vai para o Dashboard
+        navigate('/dashboard'); 
+      } else {
+        // Se o back-end negar (senha errada ou e-mail inexistente)
+        setErro(resposta.mensagem || 'Usuário ou senha incorretos.');
+      }
+    } catch (error) {
+      setErro('Erro de conexão com o servidor. Verifique se o Back-end está ativo.');
+    } finally {
+      // Garante que o botão volte ao normal
+      setCarregando(false);
     }
-    
-    setCarregando(false);
   };
 
   return (

@@ -1,9 +1,20 @@
-// src/components/Sidebar/index.tsx
-import { NavLink, useNavigate } from 'react-router-dom'; // Juntei os imports aqui para ficar mais limpo
+import { useState, useEffect } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, ShoppingBag, Box, Repeat, LogOut, Recycle } from 'lucide-react';
 
 export function Sidebar() {
-  const navigate = useNavigate(); // 1. Inicializa o hook de navegação
+  const navigate = useNavigate();
+
+  // 1. Criamos o estado para guardar o usuário
+  const [usuario, setUsuario] = useState<{ nome: string; tipo: string } | null>(null);
+
+  // 2. Buscamos os dados salvos no login
+  useEffect(() => {
+    const usuarioSalvo = localStorage.getItem('revalor_usuario');
+    if (usuarioSalvo) {
+      setUsuario(JSON.parse(usuarioSalvo));
+    }
+  }, []);
 
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
@@ -12,10 +23,11 @@ export function Sidebar() {
     { name: 'Transações', icon: Repeat, path: '/transacoes' },
   ];
 
-  // 2. Cria a função que faz o Logout
   const handleSair = () => {
-    localStorage.removeItem('revalor_auth'); // Apaga a "chave" de login
-    navigate('/login'); // Manda o usuário de volta para a tela de login
+    // 3. Limpamos os dados corretamente (usando os nomes exatos do authService)
+    localStorage.removeItem('revalor-token');
+    localStorage.removeItem('revalor_usuario');
+    navigate('/login');
   };
 
   return (
@@ -32,9 +44,16 @@ export function Sidebar() {
       {/* Info Empresa Logada */}
       <div className="mb-10">
         <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest mb-1">Empresa Logada</p>
-        <p className="text-white font-bold text-sm">Construtora EcoBuild Ltda</p>
-        <p className="text-revalor text-xs flex items-center gap-1">
-          <span className="w-1.5 h-1.5 bg-revalor rounded-full"></span> Perfil: Geradora
+        
+        {/* NOME DO USUÁRIO DINÂMICO */}
+        <p className="text-white font-bold text-sm truncate" title={usuario?.nome}>
+          {usuario ? usuario.nome : 'Carregando...'}
+        </p>
+        
+        {/* TIPO DE USUÁRIO DINÂMICO */}
+        <p className="text-revalor text-xs flex items-center gap-1 mt-1">
+          <span className="w-1.5 h-1.5 bg-revalor rounded-full"></span> 
+          Perfil: {usuario?.tipo === 'INDUSTRIA' ? 'Geradora' : 'Receptora'}
         </p>
       </div>
 
@@ -60,7 +79,7 @@ export function Sidebar() {
 
       {/* Botão Sair */}
       <button 
-        onClick={handleSair} // 3. O botão agora chama a função quando clicado
+        onClick={handleSair}
         className="flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-red-400 transition-colors mt-auto border-t border-gray-800 pt-6 w-full text-left"
       >
         <LogOut size={20} />

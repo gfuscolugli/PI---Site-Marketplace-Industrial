@@ -4,7 +4,7 @@ import { getProdutosMarketplace } from '../../../services/api';
 import type { ProdutoMarketplace } from '../../../types';
 
 export function Marketplace() {
-  const [produtos, setProdutos] = useState<ProdutoMarketplace[]>([]);
+  const [produtos, setProdutos] = useState<any[]>([]); // Usando any[] temporariamente para aceitar os campos do banco
   const [carregando, setCarregando] = useState(true);
 
   // ==========================================
@@ -42,36 +42,39 @@ export function Marketplace() {
   };
 
   // ==========================================
-  // MOTOR DE BUSCA E FILTROS (useMemo)
+  // MOTOR DE BUSCA E FILTROS (useMemo) - CORRIGIDO
   // ==========================================
   const produtosFiltrados = useMemo(() => {
     let filtrados = produtos.filter((produto) => {
+      // Ajuste para os nomes reais do banco: 'nome' em vez de 'nome_residuo'
+      const nomeResiduo = produto.nome || "";
+      const nomeIndustria = produto.industria?.nome || "Indústria não identificada";
+
       // 1. Filtro de Texto (Nome do resíduo ou da empresa)
       const matchBusca = 
-        produto.nome_residuo.toLowerCase().includes(termoBusca.toLowerCase()) ||
-        produto.nome_industria.toLowerCase().includes(termoBusca.toLowerCase());
+        nomeResiduo.toLowerCase().includes(termoBusca.toLowerCase()) ||
+        nomeIndustria.toLowerCase().includes(termoBusca.toLowerCase());
 
-      // 2. Filtro de Categoria (Checkbox)
+      // 2. Filtro de Categoria (Checkbox) - 'categorias' em vez de 'nome_categoria'
       const matchCategoria = 
-        categoriasSelecionadas.length === 0 || // Se não marcou nada, mostra todos
-        categoriasSelecionadas.includes(produto.nome_categoria);
+        categoriasSelecionadas.length === 0 || 
+        categoriasSelecionadas.includes(produto.categorias);
 
-      // 3. Filtro de Quantidade
-      const matchQuantidade = produto.quantidade >= quantidadeMin;
+      // 3. Filtro de Quantidade - 'pesoDisponivel' em vez de 'quantidade'
+      const matchQuantidade = (produto.pesoDisponivel || 0) >= quantidadeMin;
 
-      // O produto só aparece se passar nos 3 testes
       return matchBusca && matchCategoria && matchQuantidade;
     });
 
     // 4. Ordenação
     if (ordenacao === 'Menor Preço') {
-      filtrados.sort((a, b) => (a.preco_base || 0) - (b.preco_base || 0));
+      filtrados.sort((a, b) => (a.valorPorKg || 0) - (b.valorPorKg || 0));
     } else if (ordenacao === 'Maior Volume') {
-      filtrados.sort((a, b) => b.quantidade - a.quantidade);
+      filtrados.sort((a, b) => (b.pesoDisponivel || 0) - (a.pesoDisponivel || 0));
     }
 
     return filtrados;
-  }, [produtos, termoBusca, categoriasSelecionadas, quantidadeMin, ordenacao]); // Só recalcula se essas variáveis mudarem
+  }, [produtos, termoBusca, categoriasSelecionadas, quantidadeMin, ordenacao]);
 
   return (
     <div className="flex flex-col gap-6 h-full max-w-[1400px] mx-auto w-full">
@@ -82,9 +85,7 @@ export function Marketplace() {
 
       <div className="flex flex-col lg:flex-row gap-6">
         
-        {/* ========================================= */}
         {/* SIDEBAR DE FILTROS */}
-        {/* ========================================= */}
         <aside className="w-full lg:w-[280px] flex-shrink-0 bg-white p-6 rounded-2xl shadow-sm border border-gray-200 h-fit">
           <div className="flex items-center gap-2 mb-6 text-revalor">
             <Filter size={20} />
@@ -133,12 +134,9 @@ export function Marketplace() {
           </div>
         </aside>
 
-        {/* ========================================= */}
         {/* ÁREA PRINCIPAL DA VITRINE */}
-        {/* ========================================= */}
         <div className="flex-1 flex flex-col gap-6">
           
-          {/* BARRA DE BUSCA E ORDENAÇÃO */}
           <div className="flex flex-col sm:flex-row gap-4 items-center">
             <div className="relative flex-1 w-full">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
@@ -165,7 +163,6 @@ export function Marketplace() {
             </div>
           </div>
 
-          {/* GRID DE PRODUTOS */}
           {carregando ? (
              <div className="flex flex-col items-center justify-center py-20 text-gray-500">
                 <div className="w-10 h-10 border-4 border-revalor border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -173,7 +170,6 @@ export function Marketplace() {
              </div>
           ) : produtosFiltrados.length === 0 ? (
             
-             // MENSAGEM CASO O FILTRO NÃO ENCONTRE NADA
              <div className="flex flex-col items-center justify-center py-20 text-gray-500 bg-white rounded-2xl border border-gray-200">
                 <Package size={48} className="text-gray-300 mb-4" />
                 <p className="font-bold text-lg text-gray-700">Nenhum resíduo encontrado</p>
@@ -189,42 +185,41 @@ export function Marketplace() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               
-              {/* ATENÇÃO: Agora usamos o array "produtosFiltrados" no .map */}
               {produtosFiltrados.map((produto) => (
-                <div key={produto.id_residuo} className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden group hover:shadow-md transition-shadow animate-in fade-in zoom-in-95 duration-300">
+                <div key={produto.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden group hover:shadow-md transition-shadow animate-in fade-in zoom-in-95 duration-300">
                   
                   <div className="h-48 w-full relative overflow-hidden bg-gray-100">
                     {produto.imagem_url ? (
-                      <img src={produto.imagem_url} alt={produto.nome_residuo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img src={produto.imagem_url} alt={produto.nome} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">Sem Foto</div>
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-50">Sem Foto</div>
                     )}
                     
                     <div className="absolute top-3 left-3 bg-white text-gray-800 text-xs font-bold px-2.5 py-1 rounded-md shadow-sm">
-                      {produto.classe_risco || 'Sem Classe'}
+                      {produto.estadoFisico || 'Sólido'}
                     </div>
                     <div className="absolute top-3 right-3 bg-revalor text-white text-xs font-bold px-2.5 py-1 rounded-md shadow-sm">
-                      {produto.nome_categoria}
+                      {produto.categorias}
                     </div>
                   </div>
 
                   <div className="p-5 flex flex-col flex-1">
                     <h3 className="font-bold text-[#111827] text-lg leading-tight mb-3">
-                      {produto.nome_residuo}
+                      {produto.nome}
                     </h3>
                     
                     <div className="flex flex-col gap-2 mb-6">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <span className="w-1.5 h-1.5 rounded-full bg-revalor shrink-0"></span>
-                        <span className="truncate">{produto.nome_industria}</span>
+                        <span className="truncate">{produto.industria?.nome || 'Empresa Revalor'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         <MapPin size={16} className="text-gray-400 shrink-0" />
-                        <span className="truncate">{produto.endereco_industria}</span>
+                        <span className="truncate">{produto.industria?.email || 'Contato via plataforma'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         <Package size={16} className="text-gray-400 shrink-0" />
-                        <span>{produto.quantidade} {produto.unidade_medida} disponíveis</span>
+                        <span>{produto.pesoDisponivel} Ton disponíveis</span>
                       </div>
                     </div>
 
@@ -232,10 +227,10 @@ export function Marketplace() {
                       <div>
                         <p className="text-[11px] text-gray-500 uppercase font-semibold mb-0.5">Preço Base</p>
                         <p className="text-revalor font-black text-lg">
-                          {produto.preco_base 
-                            ? produto.preco_base.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) 
+                          {produto.valorPorKg 
+                            ? produto.valorPorKg.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) 
                             : 'A negociar'} 
-                          <span className="text-sm font-medium text-gray-500 ml-1">/ {produto.unidade_medida === 'Toneladas' ? 't' : 'un'}</span>
+                          <span className="text-sm font-medium text-gray-500 ml-1">/ kg</span>
                         </p>
                       </div>
                       <button className="bg-[#0B132B] hover:bg-[#1a2b5e] text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors">
