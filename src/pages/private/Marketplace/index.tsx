@@ -4,7 +4,7 @@ import { getProdutosMarketplace } from '../../../services/api';
 import type { ProdutoMarketplace } from '../../../types';
 
 export function Marketplace() {
-  const [produtos, setProdutos] = useState<any[]>([]); // Usando any[] temporariamente para aceitar os campos do banco
+  const [produtos, setProdutos] = useState<any[]>([]); 
   const [carregando, setCarregando] = useState(true);
 
   // ==========================================
@@ -36,17 +36,16 @@ export function Marketplace() {
   const toggleCategoria = (categoria: string) => {
     setCategoriasSelecionadas((prev) => 
       prev.includes(categoria)
-        ? prev.filter((c) => c !== categoria) // Se já tem, remove
-        : [...prev, categoria] // Se não tem, adiciona
+        ? prev.filter((c) => c !== categoria) 
+        : [...prev, categoria] 
     );
   };
 
   // ==========================================
-  // MOTOR DE BUSCA E FILTROS (useMemo) - CORRIGIDO
+  // MOTOR DE BUSCA E FILTROS (useMemo)
   // ==========================================
   const produtosFiltrados = useMemo(() => {
     let filtrados = produtos.filter((produto) => {
-      // Ajuste para os nomes reais do banco: 'nome' em vez de 'nome_residuo'
       const nomeResiduo = produto.nome || "";
       const nomeIndustria = produto.industria?.nome || "Indústria não identificada";
 
@@ -55,12 +54,12 @@ export function Marketplace() {
         nomeResiduo.toLowerCase().includes(termoBusca.toLowerCase()) ||
         nomeIndustria.toLowerCase().includes(termoBusca.toLowerCase());
 
-      // 2. Filtro de Categoria (Checkbox) - 'categorias' em vez de 'nome_categoria'
+      // 2. Filtro de Categoria (Checkbox)
       const matchCategoria = 
         categoriasSelecionadas.length === 0 || 
         categoriasSelecionadas.includes(produto.categorias);
 
-      // 3. Filtro de Quantidade - 'pesoDisponivel' em vez de 'quantidade'
+      // 3. Filtro de Quantidade
       const matchQuantidade = (produto.pesoDisponivel || 0) >= quantidadeMin;
 
       return matchBusca && matchCategoria && matchQuantidade;
@@ -189,8 +188,9 @@ export function Marketplace() {
                 <div key={produto.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden group hover:shadow-md transition-shadow animate-in fade-in zoom-in-95 duration-300">
                   
                   <div className="h-48 w-full relative overflow-hidden bg-gray-100">
+                    {/* A MÁGICA ACONTECE AQUI NA LINHA DE BAIXO */}
                     {produto.imagem_url ? (
-                      <img src={produto.imagem_url} alt={produto.nome} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <img src={`http://localhost:3000/uploads/${produto.imagem_url}`} alt={produto.nome} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-50">Sem Foto</div>
                     )}
