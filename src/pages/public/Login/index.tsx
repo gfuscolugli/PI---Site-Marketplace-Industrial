@@ -50,10 +50,10 @@ export function Login() {
           )}
           
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">CNPJ</label>
+            <label className="text-sm font-medium text-gray-700">Email</label>
             <div className="relative flex items-center">
               <Mail size={18} className="absolute left-3 text-gray-400" />
-              <input type="text" value={cnpj} onChange={(e) => setCnpj(e.target.value)} required placeholder="00.000.000/0001-00" className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-revalor/50 focus:border-revalor transition-all" />
+              <input type="text" value={cnpj} onChange={(e) => setCnpj(e.target.value)} required placeholder="exemplo@seuemail.com" className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-revalor/50 focus:border-revalor transition-all" />
             </div>
           </div>
 

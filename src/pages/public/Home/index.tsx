@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import Image1 from '../../../assets/main-foto2.png';
 import { PackageSearch, Truck, FileUp, RefreshCw, Recycle, Camera, Mail, Globe } from 'lucide-react';
 export default function Home() {
@@ -22,13 +23,12 @@ export default function Home() {
           </p>
           
           <div className="flex flex-wrap items-center gap-[16px] mt-[8px]">
-            <button className="bg-revalor text-white rounded-xl px-[32px] py-[16px] text-[16px] font-bold flex items-center gap-[8px] transition-transform hover:scale-105 shadow-lg shadow-revalor/20 group">
-              Acessar Plataforma 
-              <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-            </button>
-            <button className="bg-white border-[2px] border-[#E5E7EB] text-[#374151] rounded-xl px-[32px] py-[16px] text-[16px] font-bold transition-colors hover:border-revalor hover:text-revalor">
-              Falar com consultor
-            </button>
+            <Link to="/login">
+              <button className="bg-revalor text-white rounded-xl px-[32px] py-[16px] text-[16px] font-bold flex items-center gap-[8px] transition-transform hover:scale-105 shadow-lg shadow-revalor/20 group">
+                Acessar Plataforma 
+                <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+              </button>
+            </Link>
           </div>
         </div>
 

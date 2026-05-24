@@ -66,3 +66,14 @@ export const getTransacoes = async () => {
     return [];
   }
 };
+export const excluirResiduo = async (id: string | number) => {
+  try {
+    // Envia o pedido de exclusão informando o ID na URL
+    // Garanta que a rota no seu Back-end seja exatamente '/residuos/:id'
+    const response = await api.delete(`/residuos/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error("Erro ao excluir resíduo:", error);
+    throw error;
+  }
+};

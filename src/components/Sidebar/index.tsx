@@ -50,11 +50,7 @@ export function Sidebar() {
           {usuario ? usuario.nome : 'Carregando...'}
         </p>
         
-        {/* TIPO DE USUÁRIO DINÂMICO */}
-        <p className="text-revalor text-xs flex items-center gap-1 mt-1">
-          <span className="w-1.5 h-1.5 bg-revalor rounded-full"></span> 
-          Perfil: {usuario?.tipo === 'INDUSTRIA' ? 'Geradora' : 'Receptora'}
-        </p>
+      
       </div>
 
       {/* Navegação */}
