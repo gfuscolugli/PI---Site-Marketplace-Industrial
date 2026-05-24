@@ -17,4 +17,7 @@ router.get('/meus', verifyToken, isIndustria, residuoController.listarMeusResidu
 // 2. ATUALIZAÇÃO: Adicionamos o upload.single('imagem') ANTES do controller
 router.post('/', verifyToken, isIndustria, upload.single('imagem'), residuoController.criarResiduo);
 
+// NOVA IMPLEMENTAÇÃO: rota para deletar o resíduo, na qual apenas a industria owner do resíduo consegue fazer!
+router.delete('/:id', verifyToken, isIndustria, residuoController.deletarResiduo);
+
 module.exports = router;

@@ -86,8 +86,35 @@ const criarResiduo = async (req, res) => {
   }
 };
 
+// =========================================================================
+// 4. NOVA IMPLEMENTAÇÃO: Deleta um resíduo (Apenas o dono pode deletar)
+// =========================================================================
+const deletarResiduo = async (req, res) => {
+  try {
+    console.log("CHEGOU NA ROTA DE DELETE! ID:", req.params.id); // <-- ADICIONE ESTA LINHA
+    const { id } = req.params; // Captura o ID da URL
+    const industria_id = req.usuarioId; // Captura o ID do token da sessão
+
+    // Busca o resíduo verificando se o ID bate E se pertence a quem está tentando apagar
+    const residuo = await Residuo.findOne({ where: { id, industria_id } });
+
+    if (!residuo) {
+      return res.status(404).json({ message: 'Resíduo não encontrado ou você não tem permissão para excluí-lo.' });
+    }
+
+    // Exclui a linha do banco de dados
+    await residuo.destroy();
+
+    return res.status(200).json({ message: 'Resíduo excluído com sucesso!' });
+  } catch (error) {
+    console.error('Erro ao deletar resíduo:', error);
+    return res.status(500).json({ message: 'Erro interno ao deletar resíduo.' });
+  }
+};
+
 module.exports = {
   listarResiduos,
   listarMeusResiduos,
-  criarResiduo
+  criarResiduo,
+  deletarResiduo // <-- NOVA IMPLEMENTAÇÃO: Adicionado à lista de exportações
 };
