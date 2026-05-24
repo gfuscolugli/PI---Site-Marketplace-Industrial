@@ -29,13 +29,13 @@ const listarResiduos = async (req, res) => {
   }
 };
 
-// 2. NOVA FUNÇÃO: Lista APENAS os resíduos da empresa logada
+// 2. Lista APENAS os resíduos da empresa logada
 const listarMeusResiduos = async (req, res) => {
   try {
     const industria_id = req.usuarioId; // O ID vem do token de quem está logado
 
     const residuos = await Residuo.findAll({
-      where: { industria_id }, // O "pulo do gato": filtra pelo ID da indústria
+      where: { industria_id }, // Filtra pelo ID da indústria
       include: [
         {
           model: Usuario,
@@ -58,6 +58,9 @@ const criarResiduo = async (req, res) => {
     const industria_id = req.usuarioId; 
     const { nome, descricao, estadoFisico, categorias, pesoDisponivel, valorPorKg } = req.body;
 
+    // Captura o nome do arquivo gerado pelo Multer middleware (se existir)
+    const imagem_url = req.file ? req.file.filename : null;
+
     if (!nome || !estadoFisico || pesoDisponivel === undefined || valorPorKg === undefined) {
       return res.status(400).json({ message: 'Campos nome, estadoFisico, pesoDisponivel e valorPorKg são obrigatórios.' });
     }
@@ -69,7 +72,8 @@ const criarResiduo = async (req, res) => {
       categorias,
       pesoDisponivel,
       valorPorKg,
-      industria_id
+      industria_id,
+      imagem_url // Armazena a referência textual da imagem no banco de dados da Aiven
     });
 
     return res.status(201).json({
@@ -82,7 +86,6 @@ const criarResiduo = async (req, res) => {
   }
 };
 
-// Não esqueça de exportar a função nova aqui no final!
 module.exports = {
   listarResiduos,
   listarMeusResiduos,

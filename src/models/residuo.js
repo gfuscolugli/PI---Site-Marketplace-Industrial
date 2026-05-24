@@ -34,6 +34,11 @@ module.exports = (sequelize, DataTypes) => {
     industria_id: {
       type: DataTypes.INTEGER,
       allowNull: false
+    },
+    // --- NOVO CAMPO DA IMAGEM ADICIONADO AQUI ---
+    imagem_url: {
+      type: DataTypes.STRING,
+      allowNull: true // Deixamos como true para não obrigar que todo resíduo tenha foto
     }
   }, {
     sequelize,
