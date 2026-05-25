@@ -12,7 +12,11 @@ const calcularTransacao = async (residuo_id, pesoDesejado) => {
     throw new Error('Peso desejado inválido ou maior que o disponível.');
   }
 
-  const valorBruto = pesoDesejado * residuo.valorPorKg;
+  // =========================================================================
+  // MATEMÁTICA CORRIGIDA: Transforma a Tonelada (pesoDesejado) em Quilos (* 1000)
+  // antes de multiplicar pelo preço base (valorPorKg).
+  // =========================================================================
+  const valorBruto = (pesoDesejado * 1000) * residuo.valorPorKg;
   const valorTaxa = valorBruto * TAXA_PLATAFORMA;
   const valorTotal = valorBruto + valorTaxa;
 
