@@ -4,7 +4,15 @@ const { verifyToken, isEmpresa } = require('../middlewares/auth');
 
 const router = express.Router();
 
-// Apenas EMPRESA pode iniciar checkout/transação
 router.post('/checkout', verifyToken, isEmpresa, transacaoController.iniciarCheckout);
+router.get('/', verifyToken, transacaoController.listarMinhasTransacoes);
+// Rota para o Front-end puxar o saldo da Empresa
+router.get('/saldo', verifyToken, transacaoController.buscarSaldoEmpresa);
+router.post('/financeiro', verifyToken, transacaoController.processarFinanceiro);
+
+// =========================================================================
+// Rota que o botão "Simular Pagamento" do Front-end vai chamar
+// =========================================================================
+router.post('/simular-pagamento', verifyToken, transacaoController.simularPagamentoTeste);
 
 module.exports = router;
