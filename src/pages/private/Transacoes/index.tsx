@@ -72,7 +72,8 @@ export function Transacoes() {
                   <th className="py-5 px-6">Tipo / Descrição</th>
                   <th className="py-5 px-6 text-center">Peso (Ton)</th>
                   <th className="py-5 px-6">Valor Total</th>
-                  <th className="py-5 px-6">Status</th>
+                  {/* ALTERADO AQUI: Título da coluna atualizado */}
+                  <th className="py-5 px-6">Produto</th>
                 </tr>
               </thead>
               <tbody>
@@ -101,12 +102,10 @@ export function Transacoes() {
                           {t.tipo === 'DEPOSITO' || t.tipo === 'VENDA' ? '+' : ''} R$ {Number(t.valorTotal).toFixed(2)}
                         </p>
                       </td>
+                      {/* ALTERADO AQUI: Exibindo o nome do resíduo puxado do Back-end */}
                       <td className="py-4 px-6">
-                        <span className={`px-3 py-1.5 rounded-lg text-xs font-bold inline-block ${
-                          t.status === 'CONCLUIDA' ? 'bg-green-100 text-green-700' :
-                          t.status === 'CRIADA' || t.status === 'PENDENTE' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {t.status}
+                        <span className="font-bold text-gray-800 bg-gray-100 px-3 py-1.5 rounded-lg text-xs uppercase inline-block">
+                          {t.residuo?.nome || '--'}
                         </span>
                       </td>
                     </tr>

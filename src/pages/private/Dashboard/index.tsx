@@ -86,20 +86,22 @@ export function Dashboard() {
     }
   };
 
-  const formatarMoeda = (valor: number) => {
-    return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  };
+  // =========================================================================
+  // ALTERAÇÃO: Forçando a conversão para Número antes de formatar
+  // =========================================================================
+  const saldoNumerico = Number(saldo) || 0;
+  
+  // Aqui ele vai gerar algo como "68,36" cravado
+  const saldoFormatadoString = saldoNumerico.toLocaleString('pt-BR', { 
+    minimumFractionDigits: 2, 
+    maximumFractionDigits: 2 
+  });
 
-  const saldoFormatado = formatarMoeda(saldo);
+  // Dividimos perfeitamente pela vírgula
+  const partes = saldoFormatadoString.split(',');
+  const parteInteira = partes[0];
+  const parteCentavos = ',' + partes[1];
   const simboloMoeda = "R$";
-
-  // =========================================================================
-  // ALTERAÇÃO: Lógica segura para evitar o "undefined"
-  // Verificamos se existe vírgula antes de tentar separar os centavos
-  // =========================================================================
-  const partes = saldoFormatado.replace("R$", "").split(",");
-  const parteInteira = partes[0].trim();
-  const parteCentavos = partes.length > 1 ? "," + partes[1] : ",00";
   // =========================================================================
 
   return (
@@ -146,12 +148,12 @@ export function Dashboard() {
               </span>
             </div>
             
-            {saldo > 0 && !carregando && (
+            {saldoNumerico > 0 && !carregando && (
               <div className="inline-flex items-center gap-1.5 bg-revalor/20 text-revalor px-2.5 py-1 rounded-full text-xs font-bold mt-4 border border-revalor/20">
                 <ArrowUpRight size={14} /> Dinheiro na conta
               </div>
             )}
-            {saldo === 0 && !carregando && (
+            {saldoNumerico === 0 && !carregando && (
               <div className="inline-flex items-center gap-1.5 bg-white/10 text-white/70 px-2.5 py-1 rounded-full text-xs font-medium mt-4">
                 Nenhuma movimentação ainda
               </div>
@@ -314,7 +316,10 @@ export function Dashboard() {
                 className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-2xl text-2xl font-black text-gray-900 focus:ring-4 focus:ring-gray-200 outline-none transition-all"
               />
             </div>
-            <p className="text-right text-sm text-gray-500 mb-8 font-medium">Saldo disponível: <span className="text-gray-900 font-bold">{saldoFormatado}</span></p>
+            <p className="text-right text-sm text-gray-500 mb-8 font-medium">Saldo disponível: <span className="text-gray-900 font-bold">
+              {/* Ajustei aqui no modal também para ficar no padrão R$ 68,36 */}
+              {Number(saldo).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </span></p>
 
             <button 
               onClick={() => handleTransacao('SAQUE')}

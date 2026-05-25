@@ -1,85 +1,148 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Filter, Search, MapPin, Package } from 'lucide-react';
-import { getProdutosMarketplace } from '../../../services/api';
-import type { ProdutoMarketplace } from '../../../types';
+import { Filter, Search, MapPin, Package, X, ShoppingBag, Wallet } from 'lucide-react';
+// IMPORTANDO AS FUNÇÕES CORRETAS DA NOSSA API
+import { getProdutosMarketplace, getSaldoEmpresa, realizarCheckout } from '../../../services/api';
 
 export function Marketplace() {
   const [produtos, setProdutos] = useState<any[]>([]); 
   const [carregando, setCarregando] = useState(true);
+  const [processandoCompra, setProcessandoCompra] = useState(false);
 
-  // ==========================================
+  // ESTADO DO SALDO REAL (Vem do banco de dados agora!)
+  const [saldo, setSaldo] = useState(0); 
+
   // ESTADOS DOS FILTROS
-  // ==========================================
   const [termoBusca, setTermoBusca] = useState('');
-  const [categoriasSelecionadas, setCategoriasSelecionadas] = useState<string[]>([]);
   const [quantidadeMin, setQuantidadeMin] = useState(1);
-  const [ordenacao, setOrdenacao] = useState('Relevância');
+  const [ordenacao, setOrdenacao] = useState('Mais Recentes');
 
-  // Busca inicial no banco
-  useEffect(() => {
-    const carregarDados = async () => {
-      try {
-        const dados = await getProdutosMarketplace();
-        setProdutos(dados);
-      } catch (erro) {
-        console.error("Erro ao buscar dados", erro);
-      } finally {
-        setCarregando(false);
+  // ESTADOS DO MODAL DE COMPRA
+  const [produtoSelecionado, setProdutoSelecionado] = useState<any | null>(null);
+  const [quantidadeCompra, setQuantidadeCompra] = useState<number>(1);
+
+  // FUNÇÃO QUE CARREGA TUDO DA TELA INCLUINDO O SALDO REAL
+  const carregarDadosDaTela = async () => {
+    try {
+      setCarregando(true);
+      
+      const dadosVitrine = await getProdutosMarketplace();
+      setProdutos(dadosVitrine);
+
+      // BUSCANDO O SALDO REAL DO BACKEND
+      const dadosSaldo = await getSaldoEmpresa();
+      if (dadosSaldo && dadosSaldo.saldo !== undefined) {
+        setSaldo(Number(dadosSaldo.saldo));
       }
-    };
-    carregarDados();
-  }, []);
-
-  // ==========================================
-  // FUNÇÃO: Marcar/Desmarcar Categoria
-  // ==========================================
-  const toggleCategoria = (categoria: string) => {
-    setCategoriasSelecionadas((prev) => 
-      prev.includes(categoria)
-        ? prev.filter((c) => c !== categoria) 
-        : [...prev, categoria] 
-    );
+    } catch (erro) {
+      console.error("Erro ao carregar os dados iniciais", erro);
+    } finally {
+      setCarregando(false);
+    }
   };
 
-  // ==========================================
-  // MOTOR DE BUSCA E FILTROS (useMemo)
-  // ==========================================
+  useEffect(() => {
+    carregarDadosDaTela();
+  }, []);
+
   const produtosFiltrados = useMemo(() => {
     let filtrados = produtos.filter((produto) => {
       const nomeResiduo = produto.nome || "";
       const nomeIndustria = produto.industria?.nome || "Indústria não identificada";
 
-      // 1. Filtro de Texto (Nome do resíduo ou da empresa)
       const matchBusca = 
         nomeResiduo.toLowerCase().includes(termoBusca.toLowerCase()) ||
         nomeIndustria.toLowerCase().includes(termoBusca.toLowerCase());
 
-      // 2. Filtro de Categoria (Checkbox)
-      const matchCategoria = 
-        categoriasSelecionadas.length === 0 || 
-        categoriasSelecionadas.includes(produto.categorias);
-
-      // 3. Filtro de Quantidade
       const matchQuantidade = (produto.pesoDisponivel || 0) >= quantidadeMin;
 
-      return matchBusca && matchCategoria && matchQuantidade;
+      return matchBusca && matchQuantidade;
     });
 
-    // 4. Ordenação
-    if (ordenacao === 'Menor Preço') {
-      filtrados.sort((a, b) => (a.valorPorKg || 0) - (b.valorPorKg || 0));
-    } else if (ordenacao === 'Maior Volume') {
-      filtrados.sort((a, b) => (b.pesoDisponivel || 0) - (a.pesoDisponivel || 0));
-    }
+    filtrados.sort((a, b) => {
+      if (ordenacao === 'Mais Recentes') {
+        const dataA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dataB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dataB - dataA; 
+      }
+      if (ordenacao === 'Mais Antigos') {
+        const dataA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dataB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dataA - dataB;
+      }
+      if (ordenacao === 'Menor Preço') {
+        return (a.valorPorKg || 0) - (b.valorPorKg || 0);
+      }
+      if (ordenacao === 'Maior Preço') {
+        return (b.valorPorKg || 0) - (a.valorPorKg || 0);
+      }
+      if (ordenacao === 'Menor Volume') {
+        return (a.pesoDisponivel || 0) - (b.pesoDisponivel || 0);
+      }
+      if (ordenacao === 'Maior Volume') {
+        return (b.pesoDisponivel || 0) - (a.pesoDisponivel || 0);
+      }
+      return 0; 
+    });
 
     return filtrados;
-  }, [produtos, termoBusca, categoriasSelecionadas, quantidadeMin, ordenacao]);
+  }, [produtos, termoBusca, quantidadeMin, ordenacao]);
+
+  // ==========================================
+  // FUNÇÃO: FINALIZAR COMPRA DE VERDADE
+  // ==========================================
+  const handleFinalizarCompra = async () => {
+    if (!produtoSelecionado) return;
+
+    const valorTotal = quantidadeCompra * 1000 * (produtoSelecionado.valorPorKg || 0);
+
+    if (valorTotal > saldo) {
+      alert("Saldo insuficiente para realizar esta compra.");
+      return;
+    }
+
+    setProcessandoCompra(true);
+
+    try {
+      // MANDANDO PARA O CONTROLLER DO GUILHERME!
+      await realizarCheckout({
+        residuo_id: produtoSelecionado.id,
+        pesoComprado: quantidadeCompra // Vai como 0.1, 1.5, 2, etc.
+      });
+
+      alert(`Sucesso! Compra de ${quantidadeCompra} Tonelada(s) processada. O saldo será atualizado.`);
+      
+      setProdutoSelecionado(null);
+      setQuantidadeCompra(1);
+      
+      // RECARREGA A TELA PARA PEGAR O SALDO NOVO E O ESTOQUE NOVO!
+      await carregarDadosDaTela(); 
+
+    } catch (error: any) {
+      console.error(error);
+      const mensagemBack = error.response?.data?.message || "Erro interno ao finalizar transação.";
+      alert(`Falha na compra: ${mensagemBack}`);
+    } finally {
+      setProcessandoCompra(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6 h-full max-w-[1400px] mx-auto w-full">
       
-      <div className="bg-white px-6 py-4 rounded-2xl shadow-sm border border-gray-200">
+      <div className="bg-white px-6 py-4 rounded-2xl shadow-sm border border-gray-200 flex justify-between items-center">
         <h1 className="text-xl font-bold text-[#111827]">Plataforma Revalor</h1>
+        
+        <div className="flex items-center gap-3 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100">
+          <div className="bg-green-100 text-green-700 p-2 rounded-lg">
+            <Wallet size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] uppercase font-bold text-gray-500">Saldo Disponível</p>
+            <p className="font-black text-gray-900 leading-none">
+              {carregando ? 'Buscando...' : saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
@@ -92,17 +155,20 @@ export function Marketplace() {
           </div>
 
           <div className="mb-8">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Tipo de Material</h3>
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Ordenar Anúncios</h3>
             <div className="flex flex-col gap-3">
-              {['Entulho', 'Plástico', 'Metal', 'Madeira', 'Papel/Papelão', 'Orgânico'].map((item) => (
+              {['Mais Recentes', 'Mais Antigos', 'Menor Preço', 'Maior Preço', 'Menor Volume', 'Maior Volume'].map((item) => (
                 <label key={item} className="flex items-center gap-3 cursor-pointer group">
                   <input 
-                    type="checkbox" 
-                    checked={categoriasSelecionadas.includes(item)}
-                    onChange={() => toggleCategoria(item)}
-                    className="w-4 h-4 rounded border-gray-300 text-revalor focus:ring-revalor accent-revalor" 
+                    type="radio" 
+                    name="ordenacao"
+                    checked={ordenacao === item}
+                    onChange={() => setOrdenacao(item)}
+                    className="w-4 h-4 text-revalor focus:ring-revalor accent-revalor cursor-pointer" 
                   />
-                  <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">{item}</span>
+                  <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors font-medium">
+                    {item}
+                  </span>
                 </label>
               ))}
             </div>
@@ -121,66 +187,41 @@ export function Marketplace() {
               <span>100t+</span>
             </div>
           </div>
-
-          <div>
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Distância Max</h3>
-            <select className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-revalor outline-none p-2.5">
-              <option>Até 10 km</option>
-              <option>Até 25 km</option>
-              <option>Até 50 km</option>
-              <option>Qualquer distância</option>
-            </select>
-          </div>
         </aside>
 
         {/* ÁREA PRINCIPAL DA VITRINE */}
         <div className="flex-1 flex flex-col gap-6">
           
           <div className="flex flex-col sm:flex-row gap-4 items-center">
-            <div className="relative flex-1 w-full">
+            <div className="relative w-full">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
               <input 
                 type="text" 
                 value={termoBusca}
                 onChange={(e) => setTermoBusca(e.target.value)}
                 placeholder="Buscar resíduos, materiais ou indústrias..." 
-                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-revalor/50 outline-none" 
+                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-revalor/50 outline-none shadow-sm" 
               />
-            </div>
-            
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="text-sm text-gray-500">Ordenar por:</span>
-              <select 
-                value={ordenacao}
-                onChange={(e) => setOrdenacao(e.target.value)}
-                className="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-revalor outline-none p-2 shadow-sm cursor-pointer"
-              >
-                <option>Relevância</option>
-                <option>Menor Preço</option>
-                <option>Maior Volume</option>
-              </select>
             </div>
           </div>
 
           {carregando ? (
              <div className="flex flex-col items-center justify-center py-20 text-gray-500">
                 <div className="w-10 h-10 border-4 border-revalor border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p>Buscando resíduos no banco de dados...</p>
+                <p>Buscando resíduos e conectando carteira...</p>
              </div>
           ) : produtosFiltrados.length === 0 ? (
-            
              <div className="flex flex-col items-center justify-center py-20 text-gray-500 bg-white rounded-2xl border border-gray-200">
                 <Package size={48} className="text-gray-300 mb-4" />
                 <p className="font-bold text-lg text-gray-700">Nenhum resíduo encontrado</p>
                 <p className="text-sm">Tente limpar os filtros ou buscar por outro termo.</p>
                 <button 
-                  onClick={() => { setTermoBusca(''); setCategoriasSelecionadas([]); setQuantidadeMin(1); }}
+                  onClick={() => { setTermoBusca(''); setQuantidadeMin(1); setOrdenacao('Mais Recentes'); }}
                   className="mt-4 text-revalor font-bold hover:underline"
                 >
                   Limpar todos os filtros
                 </button>
              </div>
-             
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
               
@@ -188,19 +229,11 @@ export function Marketplace() {
                 <div key={produto.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col overflow-hidden group hover:shadow-md transition-shadow animate-in fade-in zoom-in-95 duration-300">
                   
                   <div className="h-48 w-full relative overflow-hidden bg-gray-100">
-                    {/* A MÁGICA ACONTECE AQUI NA LINHA DE BAIXO */}
                     {produto.imagem_url ? (
                       <img src={`http://localhost:3000/uploads/${produto.imagem_url}`} alt={produto.nome} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-50">Sem Foto</div>
                     )}
-                    
-                    <div className="absolute top-3 left-3 bg-white text-gray-800 text-xs font-bold px-2.5 py-1 rounded-md shadow-sm">
-                      {produto.estadoFisico || 'Sólido'}
-                    </div>
-                    <div className="absolute top-3 right-3 bg-revalor text-white text-xs font-bold px-2.5 py-1 rounded-md shadow-sm">
-                      {produto.categorias}
-                    </div>
                   </div>
 
                   <div className="p-5 flex flex-col flex-1">
@@ -215,7 +248,7 @@ export function Marketplace() {
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         <MapPin size={16} className="text-gray-400 shrink-0" />
-                        <span className="truncate">{produto.industria?.email || 'Contato via plataforma'}</span>
+                        <span className="truncate">{produto.industria?.nome || 'Contato via plataforma'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         <Package size={16} className="text-gray-400 shrink-0" />
@@ -233,19 +266,126 @@ export function Marketplace() {
                           <span className="text-sm font-medium text-gray-500 ml-1">/ kg</span>
                         </p>
                       </div>
-                      <button className="bg-[#0B132B] hover:bg-[#1a2b5e] text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors">
-                        Detalhes
+                      
+                      <button 
+                        onClick={() => {
+                          setProdutoSelecionado(produto);
+                          setQuantidadeCompra(1); 
+                        }}
+                        className="bg-[#0B132B] hover:bg-[#1a2b5e] text-white text-sm font-bold px-4 py-2.5 rounded-xl transition-colors cursor-pointer"
+                      >
+                        Comprar
                       </button>
+
                     </div>
                   </div>
                 </div>
               ))}
-
             </div>
           )}
-
         </div>
       </div>
+
+      {/* ========================================== */}
+      {/* MODAL DE COMPRA COM VALIDAÇÃO FRACIONADA   */}
+      {/* ========================================== */}
+      {produtoSelecionado && (() => {
+        const valorTotal = quantidadeCompra * 1000 * (produtoSelecionado.valorPorKg || 0);
+        const saldoSuficiente = saldo >= valorTotal;
+
+        return (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-[32px] w-full max-w-lg overflow-hidden flex flex-col shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+              
+              <div className="relative h-64 bg-gray-100 w-full">
+                {produtoSelecionado.imagem_url ? (
+                  <img src={`http://localhost:3000/uploads/${produtoSelecionado.imagem_url}`} alt={produtoSelecionado.nome} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">Sem Foto</div>
+                )}
+                
+                <button 
+                  onClick={() => setProdutoSelecionado(null)}
+                  className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full backdrop-blur-sm transition-all cursor-pointer"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-8 flex flex-col gap-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">{produtoSelecionado.nome}</h2>
+                  <p className="text-gray-500 text-sm">Vendido por: <span className="font-semibold text-gray-700">{produtoSelecionado.industria?.nome || 'Indústria Revalor'}</span></p>
+                </div>
+
+                <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100 flex flex-col gap-4">
+                  
+                  <div className="flex justify-between items-center pb-4 border-b border-gray-200">
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase font-bold mb-1">Preço</p>
+                      <p className="text-lg font-bold text-gray-900">
+                        R$ {Number(produtoSelecionado.valorPorKg).toFixed(2)} <span className="text-sm font-normal text-gray-500">/ kg</span>
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500 uppercase font-bold mb-1">Disponível</p>
+                      <p className="text-lg font-bold text-gray-900">{produtoSelecionado.pesoDisponivel} Ton</p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <p className="font-semibold text-gray-700">Quantidade (Ton):</p>
+                    <input 
+                      type="number" 
+                      step="0.1" 
+                      min="0.1" 
+                      max={produtoSelecionado.pesoDisponivel}
+                      value={quantidadeCompra}
+                      onChange={(e) => {
+                        let val = Number(e.target.value);
+                        if (val > produtoSelecionado.pesoDisponivel) val = produtoSelecionado.pesoDisponivel;
+                        
+                        // Permite digitar decimais menores que 1 sem travar no "1"
+                        if (val < 0.1 && e.target.value !== "" && e.target.value !== "0") {
+                          val = 0.1;
+                        }
+                        
+                        setQuantidadeCompra(val);
+                      }}
+                      className="w-24 border border-gray-300 rounded-xl p-2.5 text-center font-bold outline-none focus:ring-2 focus:ring-revalor/50"
+                    />
+                  </div>
+
+                  <div className={`${saldoSuficiente ? 'bg-[#063B2C]' : 'bg-red-600'} text-white rounded-xl p-4 flex justify-between items-center mt-2 shadow-inner transition-colors`}>
+                    <div>
+                      <p className="font-medium text-sm">Total Estimado:</p>
+                      {!saldoSuficiente && <p className="text-[10px] font-bold uppercase mt-0.5 text-red-200">Saldo Insuficiente</p>}
+                    </div>
+                    <p className="text-2xl font-black">
+                      {valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </p>
+                  </div>
+
+                </div>
+
+                <button 
+                  onClick={handleFinalizarCompra}
+                  disabled={!saldoSuficiente || processandoCompra}
+                  className={`w-full font-bold py-4 rounded-xl flex items-center justify-center gap-2 shadow-md transition-all 
+                    ${saldoSuficiente 
+                      ? 'bg-revalor hover:bg-[#047857] text-white cursor-pointer' 
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                >
+                  <ShoppingBag size={20} />
+                  {processandoCompra ? 'Registrando...' : 'Confirmar Compra'}
+                </button>
+
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
     </div>
   );
 }

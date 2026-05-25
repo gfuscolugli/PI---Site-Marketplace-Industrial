@@ -77,3 +77,25 @@ export const excluirResiduo = async (id: string | number) => {
     throw error;
   }
 };
+
+// 1. Função para buscar o saldo real da Empresa
+export const getSaldoEmpresa = async () => {
+  try {
+    const response = await api.get('/transacoes/saldo'); 
+    return response.data;
+  } catch (error) {
+    console.error("Erro ao buscar saldo", error);
+    throw error;
+  }
+};
+
+// 2. Função para efetuar a compra no back-end
+export const realizarCheckout = async (dadosCompra: { residuo_id: number, pesoComprado: number }) => {
+  try {
+    const response = await api.post('/transacoes/checkout', dadosCompra);
+    return response.data;
+  } catch (error) {
+    console.error("Erro ao realizar compra", error);
+    throw error;
+  }
+};
