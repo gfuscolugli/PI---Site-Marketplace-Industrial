@@ -70,9 +70,9 @@ export function Transacoes() {
                 <tr>
                   <th className="py-5 px-6">ID / Data</th>
                   <th className="py-5 px-6">Tipo / Descrição</th>
-                  <th className="py-5 px-6 text-center">Peso (Ton)</th>
+                  {/* ALTERADO AQUI: Cabeçalho agora é kg */}
+                  <th className="py-5 px-6 text-center">Peso (kg)</th>
                   <th className="py-5 px-6">Valor Total</th>
-                  {/* ALTERADO AQUI: Título da coluna atualizado */}
                   <th className="py-5 px-6">Produto</th>
                 </tr>
               </thead>
@@ -94,15 +94,17 @@ export function Transacoes() {
                         <p className="font-bold text-gray-900">{t.tipo}</p>
                         <p className="text-xs text-gray-500 mt-0.5">{t.descricao || 'Movimentação via plataforma'}</p>
                       </td>
+                      {/* ALTERADO AQUI: Multiplicando por 1000 para converter Ton -> Kg */}
                       <td className="py-4 px-6 text-center">
-                        <p className="font-medium text-gray-700">{t.pesoComprado ? `${t.pesoComprado} Ton` : '--'}</p>
+                        <p className="font-medium text-gray-700">
+                          {t.pesoComprado ? `${Number(t.pesoComprado) * 1000} kg` : '--'}
+                        </p>
                       </td>
                       <td className="py-4 px-6">
                         <p className={`font-black ${t.tipo === 'DEPOSITO' || t.tipo === 'VENDA' ? 'text-green-600' : 'text-gray-900'}`}>
                           {t.tipo === 'DEPOSITO' || t.tipo === 'VENDA' ? '+' : ''} R$ {Number(t.valorTotal).toFixed(2)}
                         </p>
                       </td>
-                      {/* ALTERADO AQUI: Exibindo o nome do resíduo puxado do Back-end */}
                       <td className="py-4 px-6">
                         <span className="font-bold text-gray-800 bg-gray-100 px-3 py-1.5 rounded-lg text-xs uppercase inline-block">
                           {t.residuo?.nome || '--'}

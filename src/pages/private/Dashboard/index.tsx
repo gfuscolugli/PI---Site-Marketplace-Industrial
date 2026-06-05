@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Wallet, ArrowDownRight, ArrowUpRight, RefreshCcw, QrCode, Building, X, FileText, Landmark, Copy } from 'lucide-react';
+import { Wallet, ArrowDownRight, ArrowUpRight, RefreshCcw, QrCode, Building, X, FileText, Copy } from 'lucide-react';
 import api from '../../../services/api';
 
 export function Dashboard() {
@@ -10,8 +10,9 @@ export function Dashboard() {
   const [modalSaqueAberto, setModalSaqueAberto] = useState(false);
   const [valorInput, setValorInput] = useState('');
   
-  const [metodoPagamento, setMetodoPagamento] = useState<'PIX' | 'BOLETO' | 'TED'>('PIX');
-  const [metodoSaque, setMetodoSaque] = useState<'PIX' | 'TED'>('PIX');
+  // ALTERAÇÃO: Removido o TED das opções
+  const [metodoPagamento, setMetodoPagamento] = useState<'PIX' | 'BOLETO'>('PIX');
+  const [metodoSaque, setMetodoSaque] = useState<'PIX'>('PIX');
 
   const [dadosPix, setDadosPix] = useState<{ qrCodeBase64: string, copiaECola: string } | null>(null);
 
@@ -86,23 +87,17 @@ export function Dashboard() {
     }
   };
 
-  // =========================================================================
-  // ALTERAÇÃO: Forçando a conversão para Número antes de formatar
-  // =========================================================================
   const saldoNumerico = Number(saldo) || 0;
   
-  // Aqui ele vai gerar algo como "68,36" cravado
   const saldoFormatadoString = saldoNumerico.toLocaleString('pt-BR', { 
     minimumFractionDigits: 2, 
     maximumFractionDigits: 2 
   });
 
-  // Dividimos perfeitamente pela vírgula
   const partes = saldoFormatadoString.split(',');
   const parteInteira = partes[0];
   const parteCentavos = ',' + partes[1];
   const simboloMoeda = "R$";
-  // =========================================================================
 
   return (
     <div className="flex flex-col gap-8 max-w-[1200px] mx-auto w-full relative">
@@ -155,7 +150,7 @@ export function Dashboard() {
             )}
             {saldoNumerico === 0 && !carregando && (
               <div className="inline-flex items-center gap-1.5 bg-white/10 text-white/70 px-2.5 py-1 rounded-full text-xs font-medium mt-4">
-                Nenhuma movimentação ainda
+                <span>Nenhuma movimentação ainda</span>
               </div>
             )}
           </div>
@@ -188,6 +183,7 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* MODAL DE DEPÓSITO */}
       {modalDepositoAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[32px] w-full max-w-md p-8 relative shadow-2xl animate-in fade-in zoom-in duration-200">
@@ -248,15 +244,12 @@ export function Dashboard() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Depositar na Carteira</h2>
                 <p className="text-gray-500 mb-6 text-sm">Escolha a forma de pagamento e digite o valor que deseja adicionar à sua conta Revalor.</p>
                 
-                <div className="grid grid-cols-3 gap-2 mb-6 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
+                <div className="grid grid-cols-2 gap-2 mb-6 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
                   <button onClick={() => setMetodoPagamento('PIX')} className={`py-2 flex flex-col items-center justify-center gap-1 rounded-xl text-xs font-bold transition-all ${metodoPagamento === 'PIX' ? 'bg-white shadow-sm text-revalor border border-gray-200/50' : 'text-gray-400 hover:text-gray-600'}`}>
                     <QrCode size={18} /> PIX
                   </button>
                   <button onClick={() => setMetodoPagamento('BOLETO')} className={`py-2 flex flex-col items-center justify-center gap-1 rounded-xl text-xs font-bold transition-all ${metodoPagamento === 'BOLETO' ? 'bg-white shadow-sm text-revalor border border-gray-200/50' : 'text-gray-400 hover:text-gray-600'}`}>
                     <FileText size={18} /> Boleto
-                  </button>
-                  <button onClick={() => setMetodoPagamento('TED')} className={`py-2 flex flex-col items-center justify-center gap-1 rounded-xl text-xs font-bold transition-all ${metodoPagamento === 'TED' ? 'bg-white shadow-sm text-revalor border border-gray-200/50' : 'text-gray-400 hover:text-gray-600'}`}>
-                    <Landmark size={18} /> TED
                   </button>
                 </div>
 
@@ -277,7 +270,6 @@ export function Dashboard() {
                 >
                   {metodoPagamento === 'PIX' && 'Gerar Código PIX'}
                   {metodoPagamento === 'BOLETO' && 'Gerar Boleto Bancário'}
-                  {metodoPagamento === 'TED' && 'Ver Dados para TED'}
                 </button>
               </>
             )}
@@ -285,6 +277,7 @@ export function Dashboard() {
         </div>
       )}
 
+      {/* MODAL DE SAQUE */}
       {modalSaqueAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-[32px] w-full max-w-md p-8 relative shadow-2xl animate-in fade-in zoom-in duration-200">
@@ -297,12 +290,9 @@ export function Dashboard() {
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Sacar para o Banco</h2>
             <p className="text-gray-500 mb-6 text-sm">Escolha como deseja transferir o saldo para a conta vinculada ao seu CNPJ.</p>
             
-            <div className="grid grid-cols-2 gap-2 mb-6 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
-              <button onClick={() => setMetodoSaque('PIX')} className={`py-2 flex flex-col items-center justify-center gap-1 rounded-xl text-xs font-bold transition-all ${metodoSaque === 'PIX' ? 'bg-white shadow-sm text-gray-900 border border-gray-200/50' : 'text-gray-400 hover:text-gray-600'}`}>
+            <div className="grid grid-cols-1 gap-2 mb-6 bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
+              <button onClick={() => setMetodoSaque('PIX')} className={`py-2 flex flex-col items-center justify-center gap-1 rounded-xl text-xs font-bold transition-all bg-white shadow-sm text-gray-900 border border-gray-200/50`}>
                 <QrCode size={18} /> Chave PIX
-              </button>
-              <button onClick={() => setMetodoSaque('TED')} className={`py-2 flex flex-col items-center justify-center gap-1 rounded-xl text-xs font-bold transition-all ${metodoSaque === 'TED' ? 'bg-white shadow-sm text-gray-900 border border-gray-200/50' : 'text-gray-400 hover:text-gray-600'}`}>
-                <Landmark size={18} /> Transferência TED
               </button>
             </div>
 
@@ -317,7 +307,6 @@ export function Dashboard() {
               />
             </div>
             <p className="text-right text-sm text-gray-500 mb-8 font-medium">Saldo disponível: <span className="text-gray-900 font-bold">
-              {/* Ajustei aqui no modal também para ficar no padrão R$ 68,36 */}
               {Number(saldo).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </span></p>
 

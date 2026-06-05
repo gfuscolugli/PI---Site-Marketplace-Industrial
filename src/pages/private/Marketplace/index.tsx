@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Filter, Search, MapPin, Package, X, ShoppingBag, Wallet } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 // IMPORTANDO AS FUNÇÕES CORRETAS DA NOSSA API
 import { getProdutosMarketplace, getSaldoEmpresa, realizarCheckout } from '../../../services/api';
 
@@ -88,47 +89,50 @@ export function Marketplace() {
   }, [produtos, termoBusca, quantidadeMin, ordenacao]);
 
   // ==========================================
-  // FUNÇÃO: FINALIZAR COMPRA DE VERDADE
+  // FUNÇÃO: FINALIZAR COMPRA
   // ==========================================
   const handleFinalizarCompra = async () => {
     if (!produtoSelecionado) return;
 
-    const valorTotal = quantidadeCompra * 1000 * (produtoSelecionado.valorPorKg || 0);
+    // Cálculo em Reais (Preço * Quantidade em KG)
+    const valorTotal = quantidadeCompra * (produtoSelecionado.valorPorKg || 0);
 
     if (valorTotal > saldo) {
-      alert("Saldo insuficiente para realizar esta compra.");
+      toast.error("Saldo insuficiente para realizar esta compra.");
       return;
     }
 
     setProcessandoCompra(true);
 
     try {
-      // MANDANDO PARA O CONTROLLER DO GUILHERME!
+      // FIX: Dividimos por 1000 para converter KG -> Toneladas para o backend
       await realizarCheckout({
         residuo_id: produtoSelecionado.id,
-        pesoComprado: quantidadeCompra // Vai como 0.1, 1.5, 2, etc.
+        pesoComprado: quantidadeCompra / 1000 
       });
 
-      alert(`Sucesso! Compra de ${quantidadeCompra} Tonelada(s) processada. O saldo será atualizado.`);
+      toast.success(`Sucesso! Compra de ${quantidadeCompra} kg processada.`);
       
       setProdutoSelecionado(null);
       setQuantidadeCompra(1);
       
-      // RECARREGA A TELA PARA PEGAR O SALDO NOVO E O ESTOQUE NOVO!
+      // Atualiza a tela
       await carregarDadosDaTela(); 
 
     } catch (error: any) {
       console.error(error);
       const mensagemBack = error.response?.data?.message || "Erro interno ao finalizar transação.";
-      alert(`Falha na compra: ${mensagemBack}`);
+      toast.error(`Falha na compra: ${mensagemBack}`);
     } finally {
       setProcessandoCompra(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-6 h-full max-w-[1400px] mx-auto w-full">
+    <div className="flex flex-col gap-6 h-full max-w-[1400px] mx-auto w-full relative">
       
+      <Toaster position="top-right" reverseOrder={false} />
+
       <div className="bg-white px-6 py-4 rounded-2xl shadow-sm border border-gray-200 flex justify-between items-center">
         <h1 className="text-xl font-bold text-[#111827]">Plataforma Revalor</h1>
         
@@ -147,7 +151,6 @@ export function Marketplace() {
 
       <div className="flex flex-col lg:flex-row gap-6">
         
-        {/* SIDEBAR DE FILTROS */}
         <aside className="w-full lg:w-[280px] flex-shrink-0 bg-white p-6 rounded-2xl shadow-sm border border-gray-200 h-fit">
           <div className="flex items-center gap-2 mb-6 text-revalor">
             <Filter size={20} />
@@ -175,21 +178,20 @@ export function Marketplace() {
           </div>
 
           <div className="mb-8">
-            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Volume Mínimo: {quantidadeMin}t</h3>
+            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Volume Mínimo: {quantidadeMin} kg</h3>
             <input 
-              type="range" min="1" max="100" 
+              type="range" min="1" max="5000" step="10"
               value={quantidadeMin}
               onChange={(e) => setQuantidadeMin(Number(e.target.value))}
               className="w-full accent-revalor" 
             />
             <div className="flex justify-between text-xs text-gray-400 mt-2">
-              <span>1t</span>
-              <span>100t+</span>
+              <span>1 kg</span>
+              <span>5000+ kg</span>
             </div>
           </div>
         </aside>
 
-        {/* ÁREA PRINCIPAL DA VITRINE */}
         <div className="flex-1 flex flex-col gap-6">
           
           <div className="flex flex-col sm:flex-row gap-4 items-center">
@@ -252,7 +254,7 @@ export function Marketplace() {
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-500">
                         <Package size={16} className="text-gray-400 shrink-0" />
-                        <span>{produto.pesoDisponivel} Ton disponíveis</span>
+                        <span>{produto.pesoDisponivel} kg disponíveis</span>
                       </div>
                     </div>
 
@@ -286,11 +288,8 @@ export function Marketplace() {
         </div>
       </div>
 
-      {/* ========================================== */}
-      {/* MODAL DE COMPRA COM VALIDAÇÃO FRACIONADA   */}
-      {/* ========================================== */}
       {produtoSelecionado && (() => {
-        const valorTotal = quantidadeCompra * 1000 * (produtoSelecionado.valorPorKg || 0);
+        const valorTotal = quantidadeCompra * (produtoSelecionado.valorPorKg || 0);
         const saldoSuficiente = saldo >= valorTotal;
 
         return (
@@ -329,27 +328,23 @@ export function Marketplace() {
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-gray-500 uppercase font-bold mb-1">Disponível</p>
-                      <p className="text-lg font-bold text-gray-900">{produtoSelecionado.pesoDisponivel} Ton</p>
+                      <p className="text-lg font-bold text-gray-900">{produtoSelecionado.pesoDisponivel} kg</p>
                     </div>
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <p className="font-semibold text-gray-700">Quantidade (Ton):</p>
+                    <p className="font-semibold text-gray-700">Quantidade (kg):</p>
                     <input 
                       type="number" 
-                      step="0.1" 
+                      step="any" 
                       min="0.1" 
                       max={produtoSelecionado.pesoDisponivel}
                       value={quantidadeCompra}
                       onChange={(e) => {
-                        let val = Number(e.target.value);
-                        if (val > produtoSelecionado.pesoDisponivel) val = produtoSelecionado.pesoDisponivel;
-                        
-                        // Permite digitar decimais menores que 1 sem travar no "1"
-                        if (val < 0.1 && e.target.value !== "" && e.target.value !== "0") {
-                          val = 0.1;
-                        }
-                        
+                        const val = parseFloat(e.target.value);
+                        if (isNaN(val)) { setQuantidadeCompra(0.1); return; }
+                        if (val > produtoSelecionado.pesoDisponivel) { setQuantidadeCompra(produtoSelecionado.pesoDisponivel); return; }
+                        if (val < 0.1) { setQuantidadeCompra(0.1); return; }
                         setQuantidadeCompra(val);
                       }}
                       className="w-24 border border-gray-300 rounded-xl p-2.5 text-center font-bold outline-none focus:ring-2 focus:ring-revalor/50"
