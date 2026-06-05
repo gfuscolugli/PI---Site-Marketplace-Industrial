@@ -1,3 +1,13 @@
+# Variáveis de ambiente (Segurança)
 .env
 
+# Dependências (Não devem ser comitadas)
 node_modules/
+
+# Uploads e arquivos de mídia (Não comitar arquivos pesados)
+uploads/
+
+# Arquivos de log e sistema
+*.log
+.DS_Store
+.history/

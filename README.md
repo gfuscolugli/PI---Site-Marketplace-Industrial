@@ -1,4 +1,4 @@
-# Revalor - Marketplace de Economia Circular (Backend/API)
+# Revalor – Marketplace de Economia Circular (Backend/API)
 
 Backend desenvolvido em **Node.js** com **Express** e banco de dados **MySQL** utilizando o ORM **Sequelize**.
 O objetivo dessa API é prover as regras de negócio para o marketplace B2B **Revalor**, permitindo que Indústrias divulguem seus resíduos e Empresas compradoras realizem compras/transações seguras.
@@ -9,15 +9,15 @@ O objetivo dessa API é prover as regras de negócio para o marketplace B2B **Re
 
 O projeto segue um padrão **MVC adaptado para APIs RESTful**, separando as responsabilidades para manter o código flexível, legível e de fácil manutenção:
 
-*   **`src/config/`**: Arquivos de configuração externos. Aqui guardamos a configuração de como o banco de dados via Sequelize irá conectar, mapeando para o arquivo local `.env`.
-*   **`src/models/`**: Representa a base de dados em forma de classes/objetos. Cada arquivo descreve os atributos de uma tabela (ex: `Usuario`, `Residuo`) e seus relacionamentos.
-*   **`src/migrations/`**: Script de versionamento do banco de dados. Serve para criar, alterar e desfazer tabelas sistematicamente de forma padronizada via terminal.
-*   **`src/controllers/`**: Recebe os dados de requisições HTTP, interpela os Services/Models se necessário, e retorna respostas HTTP padronizadas. 
-*   **`src/services/`**: Concentra regras de negócio pesadas ou isoladas. Por exemplo, os cálculos e abstrações de transações ficam no Service.  
-*   **`src/routes/`**: Define os Endpoints (`/api/register`, `/api/residuos`) e atrela cada rota ao seu devido Controlador, eventualmente injetando Middlewares no caminho.
-*   **`src/middlewares/`**: Trechos de código que interceptam requisições. Usado para segurança: injetar regras CORS, validar JWT de autorização e separar domínios de `INDUSTRIA` vs `EMPRESA`.
-*   **`src/app.js`**: Reúne os middlewares da aplicação base (CORS, body parser json) e atrela com o indexador de rotas.
-*   **`server.js`**: O ponto de partida principal da aplicação. Responsável apenas por instanciar a escuta de portas do `app.js` e estabelecer teste rápido com o banco de dados.
+* **`src/config/`**: Arquivos de configuração externos. Aqui guardamos a configuração de como o banco de dados via Sequelize irá conectar, mapeando para o arquivo local `.env`.
+* **`src/models/`**: Representa a base de dados em forma de classes/objetos. Cada arquivo descreve os atributos de uma tabela (ex: `Usuario`, `Residuo`, `Transacao`) e seus relacionamentos.
+* **`src/migrations/`**: Script de versionamento do banco de dados. Serve para criar, alterar e desfazer tabelas sistematicamente de forma padronizada via terminal.
+* **`src/controllers/`**: Recebe os dados de requisições HTTP, interpela os Services/Models se necessário, e retorna respostas HTTP padronizadas.
+* **`src/services/`**: Concentra regras de negócio pesadas ou isoladas. Por exemplo, os cálculos e abstrações de transações ficam no Service.
+* **`src/routes/`**: Define os Endpoints (`/api/register`, `/api/residuos`) e atrela cada rota ao seu devido Controlador, eventualmente injetando Middlewares no caminho.
+* **`src/middlewares/`**: Trechos de código que interceptam requisições. Usado para segurança: injetar regras CORS, validar JWT de autorização e separar domínios de `INDUSTRIA` vs `EMPRESA`.
+* **`app.js`**: Reúne os middlewares da aplicação base (CORS, body parser json) e atrela com o indexador de rotas.
+* **`server.js`**: O ponto de partida principal da aplicação. Responsável apenas por instanciar a escuta de portas do `app.js` e estabelecer teste rápido com o banco de dados.
 
 ---
 
@@ -26,6 +26,7 @@ O projeto segue um padrão **MVC adaptado para APIs RESTful**, separando as resp
 Para testar ou rodar na sua máquina de desenvolvimento de forma integrada, siga as instruções estritas:
 
 ### 2.1. Preparando o Ambiente / Instalação
+
 1. Certifique-se de que o **MySQL** está rodando em segundo plano nativamente ou via contêineres XAMPP / Docker.
 2. Crie manualmente o seu banco de dados no seu cliente SGBD (ex: MySQL Workbench):
    ```sql
@@ -44,31 +45,38 @@ Para testar ou rodar na sua máquina de desenvolvimento de forma integrada, siga
 
    # Segredo para assinatura de Tokens JWT
    JWT_SECRET=revalor_super_secret_key_12345
+
+   # Token de integração Mercado Pago
+   MERCADOPAGO_ACCESS_TOKEN=seu_token_aqui
    ```
-4. Pelo terminal (dentro da pasta `BACK-END/`), instale todas as dependências do projeto listadas no `package.json`: 
+4. Pelo terminal (dentro da pasta `BACK-END/`), instale todas as dependências do projeto listadas no `package.json`:
    ```bash
    npm install
    ```
 
 ### 2.2. Executar as Migrations (Criar as tabelas no Banco de Dados)
-Use a CLI do CLI Sequelize apontando para a execução local das migrations que vão disparar os `CREATE TABLES`:
+
+Use a CLI do Sequelize apontando para a execução local das migrations que vão disparar os `CREATE TABLES`:
 ```bash
 npx sequelize-cli db:migrate
 ```
 
 ### 2.3. Executando o Servidor Node
+
 Inicie o Express (irá rodar na `PORT` especificada no arquivo `.env`, o padrão é 3000):
 ```bash
 node server.js
 ```
-Ou para ambiente de dev rodando hot-reload:
+Ou para ambiente de dev com hot-reload:
 ```bash
 npx nodemon server.js
 ```
 
-Se tiver sucesso, exibe no seu terminal:  
-*Servidor rodando na porta 3000*  
-*Conexão com o banco de dados estabelecida com sucesso.*
+Se tiver sucesso, exibe no seu terminal:
+```
+Servidor rodando na porta 3000
+Conexão com o banco de dados estabelecida com sucesso.
+```
 
 ---
 
@@ -76,10 +84,16 @@ Se tiver sucesso, exibe no seu terminal:
 
 Todas as rotas expostas estão prefixadas com `/api`.
 
-### Autenticação 
+> **ATENÇÃO:** As rotas marcadas com 🔒 exigem autenticação JWT no header:
+> `Authorization: Bearer <SEU_TOKEN>`
+
+---
+
+### Autenticação
 
 #### `POST /api/auth/register`
 **Descrição:** Rota não autenticada que cadastra um novo usuário.
+
 **Body:**
 ```json
 {
@@ -90,7 +104,7 @@ Todas as rotas expostas estão prefixadas com `/api`.
   "telefones": ["(11) 99999-1111", "(11) 3213-3333"]
 }
 ```
-**Resposta 201 (Sucesso):** 
+**Resposta 201 (Sucesso):**
 ```json
 {
   "message": "Usuário cadastrado com sucesso!",
@@ -98,8 +112,11 @@ Todas as rotas expostas estão prefixadas com `/api`.
 }
 ```
 
+---
+
 #### `POST /api/auth/login`
-**Descrição:** Obtém Token JWT de um usuário recém cadastrado.
+**Descrição:** Obtém Token JWT de um usuário cadastrado.
+
 **Body:**
 ```json
 {
@@ -107,7 +124,7 @@ Todas as rotas expostas estão prefixadas com `/api`.
   "senha": "password123"
 }
 ```
-**Resposta 200 (Sucesso):** O token DEVE ser salvo em localStorage.
+**Resposta 200 (Sucesso):** O token **DEVE** ser salvo em `localStorage`.
 ```json
 {
   "message": "Login realizado com sucesso.",
@@ -120,18 +137,19 @@ Todas as rotas expostas estão prefixadas com `/api`.
 
 ### Resíduos (Catálogo e Criação)
 
-> **ATENÇÃO**: As próximas rotas precisam do header HTTP Authorization.
-> Para enviá-lo pelo front, set o cabeçalho request para: `{ "Authorization": "Bearer SEU_TOKEN" }` 
-
-#### `GET /api/residuos`
+#### 🔒 `GET /api/residuos`
 **Descrição:** Permite leitura livre do feed de resíduos disponíveis.
-**Parâmetros de Permissão:** Qualquer Perfil autenticado (INDUSTRIA e EMPRESA).
+**Parâmetros de Permissão:** Qualquer perfil autenticado (`INDUSTRIA` e `EMPRESA`).
 **Query Strings Aceitas (Filtros):** `?estadoFisico=Sólido` ou `?categorias=Metal`
-**Resposta 200:** Array JSON com cada resíduo.
 
-#### `POST /api/residuos`
+**Resposta 200:** Array JSON com cada resíduo disponível.
+
+---
+
+#### 🔒 `POST /api/residuos`
 **Descrição:** Utilizado por Indústrias para cadastrar um material disponível à venda.
-**Parâmetros de Permissão:** APENAS Usuários do TIPO = `INDUSTRIA`.
+**Parâmetros de Permissão:** APENAS usuários do tipo `INDUSTRIA`.
+
 **Body:**
 ```json
 {
@@ -146,12 +164,45 @@ Todas as rotas expostas estão prefixadas com `/api`.
 
 ---
 
+### Financeiro (Carteira e Saldos)
+
+#### 🔒 `GET /api/transacoes/saldo`
+**Descrição:** Retorna o saldo atual da empresa logada.
+
+**Resposta 200:**
+```json
+{ "saldo": 2000.00 }
+```
+
+---
+
+#### 🔒 `POST /api/transacoes/financeiro`
+**Descrição:** Processa depósitos (PIX/Boleto) ou saques na carteira do usuário.
+
+**Body:**
+```json
+{ "tipo": "DEPOSITO", "valor": 2000, "metodo": "PIX" }
+```
+
+---
+
+#### 🔒 `POST /api/transacoes/simular-pagamento`
+**Descrição:** Rota de teste para simular aprovação de pagamento instantânea.
+
+**Body:**
+```json
+{ "valor": 2000 }
+```
+
+---
+
 ### Transações e Cesta de Checkout
 
-#### `POST /api/transacoes/checkout`
-**Descrição:** Dispara uma ação de compra de uma Empresa adquirindo certo peso do lote de uma Industria.
-**Parâmetros de Permissão:** APENAS Usuários do TIPO = `EMPRESA`.
-**Regras Injetadas Backend:** O Service Backend autoinjeta uma **TAXA DE SERVIÇO DE 5%** em cima do peso comprado versus preço atual.
+#### 🔒 `POST /api/transacoes/checkout`
+**Descrição:** Dispara uma ação de compra de uma Empresa adquirindo certo peso do lote de uma Indústria.
+**Parâmetros de Permissão:** APENAS usuários do tipo `EMPRESA`.
+**Regras Injetadas Backend:** O Service Backend autoinjeta uma **taxa de serviço de 5%** em cima do peso comprado versus o preço atual.
+
 **Body:**
 ```json
 {
@@ -159,7 +210,9 @@ Todas as rotas expostas estão prefixadas com `/api`.
   "pesoComprado": 100.0
 }
 ```
-**Resposta 201 (Sucesso):** Resposta comprova valor Bruto vs Valor Total calculado com o Add-On embutido pelo service.
+> ⚠️ **Atenção:** O peso deve ser enviado em **toneladas** (Ex: 1kg = 0.001 Ton).
+
+**Resposta 201 (Sucesso):** Comprova valor Bruto vs Valor Total calculado com o add-on embutido pelo service.
 ```json
 {
   "message": "Transação iniciada com sucesso!",
@@ -179,22 +232,24 @@ Todas as rotas expostas estão prefixadas com `/api`.
 
 ## 4. Conectar a API ao Frontend React / Vite
 
-Para ligar essa maravilha ao seu React no Frontend (que roda em `http://localhost:5173`), preparamos o **Middleware de CORS** (ver em `src/app.js`) para aceitar exclusivamente origens partindo desse host local.
+Para ligar essa API ao seu React no Frontend (que roda em `http://localhost:5173`), o **Middleware de CORS** (ver em `src/app.js`) está configurado para aceitar exclusivamente origens partindo desse host local.
 
-No seu React, você utilizará o pacote bibliotecário universal `axios` ou a base unificada de `fetch`. Exemplo base recomendável a ser feito lá:
+No seu React, utilize o pacote `axios` para consumir a API:
 
-1. Instale Axios no Front: `npm install axios`
-2. Crie uma abstração global de Base-URL no Front: `api.js`
+1. Instale o Axios no Front:
+   ```bash
+   npm install axios
+   ```
+2. Crie uma abstração global de Base-URL: `src/services/api.js`
 
 ```javascript
-// no Frontend: src/services/api.js
 import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'http://localhost:3000/api', // Esta URL se conecta ao Express Backend
 });
 
-// Interceptor p/ anexar dinamicamente o LocalStorage JWT nas rotas de Catálogo:
+// Interceptor para anexar dinamicamente o JWT do LocalStorage nas requisições:
 api.interceptors.request.use(async config => {
   const token = localStorage.getItem('revalor-token');
   if (token) {

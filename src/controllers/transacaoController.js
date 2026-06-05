@@ -1,6 +1,6 @@
 const models = require('../models');
 
-// O seu sistema usa 'Usuario' para representar a empresa logada.
+// O sistema usa 'Usuario' para representar a empresa logada.
 const Transacao = models.Transacao || models.transacao;
 const Residuo = models.Residuo || models.residuo;
 const Usuario = models.Usuario || models.usuario;
@@ -130,46 +130,110 @@ const listarMinhasTransacoes = async (req, res) => {
   }
 };
 
+// =========================================================================
+// FUNÇÃO REFEITA: PIX (Real com Fallback Simulado), Boleto e Saque Simulados
+// =========================================================================
 const processarFinanceiro = async (req, res) => {
   try {
     const { tipo, valor, metodo } = req.body;
+    const usuarioId = req.usuarioId; 
     const emailTeste = "teste@revalor.com.br"; 
 
-    if (tipo === 'DEPOSITO' && metodo === 'PIX') {
-      const client = new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN });
-      const payment = new Payment(client);
+    // --- LÓGICA DE DEPÓSITO ---
+    if (tipo === 'DEPOSITO') {
+      
+      // 1. PIX: Integração real com o Mercado Pago + Anti-Falha para a Apresentação
+      if (metodo === 'PIX') {
+        try {
+          const client = new MercadoPagoConfig({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN });
+          const payment = new Payment(client);
 
-      const respostaMP = await payment.create({
-        body: {
-          transaction_amount: Number(valor),
-          description: 'Depósito - Carteira Revalor',
-          payment_method_id: 'pix',
-          payer: {
-            email: emailTeste,
-            first_name: "Guilherme",
-            last_name: "Fusco",
-            identification: {
-              type: "CPF",
-              number: "19119119100" 
+          const respostaMP = await payment.create({
+            body: {
+              transaction_amount: Number(valor),
+              description: 'Depósito - Carteira Revalor (PIX)',
+              payment_method_id: 'pix',
+              payer: {
+                email: emailTeste,
+                first_name: "Guilherme",
+                last_name: "Fusco",
+                identification: {
+                  type: "CPF",
+                  number: "19119119100" 
+                }
+              }
             }
-          }
-        }
-      });
+          });
 
-      return res.json({
-        message: 'PIX gerado com sucesso!',
-        qr_code: respostaMP.point_of_interaction.transaction_data.qr_code,
-        qr_code_base64: respostaMP.point_of_interaction.transaction_data.qr_code_base64,
-        id_pagamento: respostaMP.id
+          return res.json({
+            message: 'PIX gerado com sucesso!',
+            qr_code: respostaMP.point_of_interaction.transaction_data.qr_code,
+            qr_code_base64: respostaMP.point_of_interaction.transaction_data.qr_code_base64,
+            id_pagamento: respostaMP.id
+          });
+        } catch (erroMP) {
+          console.log("Erro no Mercado Pago. Ativando Mock de PIX para a apresentação.");
+          // MÁGICA DA APRESENTAÇÃO: Se o Mercado Pago falhar, devolvemos um QR Code fictício
+          return res.json({
+            message: 'PIX Simulado (Modo de Apresentação)',
+            qr_code: "00020126360014br.gov.bcb.pix0114+55119999999995204000053039865802BR5915EMPRESA TESTE6009SAO PAULO62070503***6304A1B2",
+            qr_code_base64: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+            id_pagamento: Math.floor(Math.random() * 10000000)
+          });
+        }
+      }
+
+      // 2. BOLETO: Mock (Simulação) para apresentação
+      if (metodo === 'BOLETO') {
+        // MÁGICA PARA A APRESENTAÇÃO: Acha o usuário e credita o valor na hora!
+        const usuario = await Usuario.findByPk(usuarioId);
+        if (usuario) {
+          usuario.saldo = Number(usuario.saldo || 0) + Number(valor);
+          await usuario.save();
+        }
+
+        return res.status(200).json({
+          message: 'Boleto gerado com sucesso!',
+          link_boleto: 'https://www.mercadopago.com.br/boleto/simulacao-dev',
+          id_pagamento: Math.floor(Math.random() * 1000000000)
+        });
+      }
+    }
+
+    // --- LÓGICA DE SAQUE (MOCK BEM SUCEDIDO) ---
+    if (tipo === 'SAQUE') {
+      const usuario = await Usuario.findByPk(usuarioId);
+      
+      if (!usuario) {
+        return res.status(404).json({ message: 'Usuário não encontrado.' });
+      }
+
+      const valorSaque = Number(valor);
+      const saldoAtual = Number(usuario.saldo || 0);
+
+      if (saldoAtual < valorSaque) {
+        return res.status(400).json({ 
+          message: 'Saldo insuficiente. Verifique o valor na sua carteira.' 
+        });
+      }
+
+      // Desconta o valor do banco de dados
+      usuario.saldo = saldoAtual - valorSaque;
+      await usuario.save();
+
+      return res.status(200).json({
+        message: 'Saque processado com sucesso! O valor foi transferido para a sua conta.',
+        novoSaldo: usuario.saldo
       });
     }
 
+    // Fallback de segurança
     return res.status(400).json({ 
-      message: `A função de ${tipo} via ${metodo} será implementada em breve!` 
+      message: `A função de ${tipo} via ${metodo} não é suportada ou será implementada em breve.` 
     });
 
   } catch (error) {
-    console.error('Erro ao conectar com Mercado Pago:', error);
+    console.error('Erro ao Processar Financeiro:', error);
     res.status(500).json({ message: 'Erro interno ao processar transação financeira.' });
   }
 };

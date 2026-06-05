@@ -40,6 +40,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(10, 2), // Permite armazenar valores monetários precisos (ex: 99999999.99)
       allowNull: false,
       defaultValue: 0.00             // Garante que toda nova conta cadastrada comece com R$ 0,00
+    },
+    // =========================================================================
+    // NOVA ALTERAÇÃO: ADIÇÃO DO CAMPO LOGO_URL PARA O PERFIL DA EMPRESA
+    // =========================================================================
+    logo_url: {
+      type: DataTypes.STRING,
+      allowNull: true,               // Pode ser nulo, pois empresas antigas ou recém-criadas podem não ter logo ainda
+      defaultValue: null
     }
   }, {
     sequelize,

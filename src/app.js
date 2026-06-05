@@ -1,14 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const routes = require('./routes');
-// ALTERAÇÃO 1: Importando o 'path' do Node.js para trabalhar com os caminhos de pastas
 const path = require('path'); 
 
 const app = express();
 
-// Configuração robusta do CORS adicionada aqui
+// Configuração corrigida: aceita as duas portas que o Vite pode usar
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: ['http://localhost:5173', 'http://localhost:5174'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
@@ -17,7 +16,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ALTERAÇÃO 2: Configurando a pasta 'uploads' como estática (pública) para o Front-end conseguir ler as imagens
+// Configurando a pasta 'uploads' como estática
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 app.use('/api', routes);
